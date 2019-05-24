@@ -12,7 +12,7 @@ RUN yum --setopt=tsflags=nodocs -y update && \
 	gsl gsl-devel \
 	lapack lapack-devel \
 	cmake make \
-	openmpi openmpi-devel
+	openmpi openmpi-devel \
 	perl \
 	python && \
 	yum clean all
