@@ -44,7 +44,7 @@ RUN wget -O dakota.tar.gz "https://dakota.sandia.gov/sites/default/files/distrib
 	cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR \
 	-DHAVE_QUESO:BOOL=ON -DDAKOTA_HAVE_GSL:BOOL=ON \
 	-DDAKOTA_HAVE_MPI:BOOL=TRUE \
-	-DCMAKE_CXX_COMPILER:FILEPATH=/usr/lib64/openmpi/bin/mpicxx
+	-DCMAKE_CXX_COMPILER:FILEPATH=/usr/lib64/openmpi/bin/mpicxx \
 	/src/dakota-${DAKOTA_VER}.0.src && \
 	make -j$(nproc) && \
 	make install && \
