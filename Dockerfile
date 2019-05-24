@@ -5,19 +5,14 @@ FROM centos:7
 RUN yum --setopt=tsflags=nodocs -y update && \
 	yum --setopt=tsflags=nodocs -y install \
 	wget \
-	blas \
-	blas-devel \
-	boost \
-	boost-devel \
-	gcc \
-	gcc-c++ \
+	blas blas-devel \
+	boost boost-devel \
+	gcc gcc-c++ \
 	gcc-gfortran \
-	gsl \
-	gsl-devel \
-	lapack \
-	lapack-devel \
-	cmake \
-	make \
+	gsl gsl-devel \
+	lapack lapack-devel \
+	cmake make \
+	openmpi openmpi-devel
 	perl \
 	python && \
 	yum clean all
@@ -36,7 +31,7 @@ RUN wget https://github.com/Kitware/CMake/releases/download/v${CMAKE_VER}/cmake-
 	tar xf cmake* && \
 	cd cmake* && \
 	./bootstrap --prefix=/usr/local && \
-	make && \
+	make -j$(nproc) && \
 	make install && \
 	cd /src && rm -rf /src/* && \
 	cmake --version
@@ -46,8 +41,12 @@ RUN wget -O dakota.tar.gz "https://dakota.sandia.gov/sites/default/files/distrib
 	tar xf dakota.tar.gz && \
 	rm dakota.tar.gz && \
 	mkdir build && cd build && \
-	cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR -DHAVE_QUESO=ON -DDAKOTA_HAVE_GSL=ON /src/dakota-${DAKOTA_VER}.0.src && \
-	make && \
+	cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR \
+	-DHAVE_QUESO:BOOL=ON -DDAKOTA_HAVE_GSL:BOOL=ON \
+	-DDAKOTA_HAVE_MPI:BOOL=TRUE \
+	-DCMAKE_CXX_COMPILER:FILEPATH=/usr/lib64/openmpi/bin/mpicxx
+	/src/dakota-${DAKOTA_VER}.0.src && \
+	make -j$(nproc) && \
 	make install && \
 	rm -rf /src/*
 

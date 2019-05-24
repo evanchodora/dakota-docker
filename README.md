@@ -4,7 +4,7 @@
 
 A Dockerfile to build a self-contained Dakota environment with all dependencies. Built using the latest version of Dakota (currently 6.10).
 
-Simpl build using `docker build -t dakota .` and run with `docker run -it --rm -v $WORK_DIR:/src dakota -i $DAKOTA_INPUT_FILE` 
+Simply build using `docker build -t dakota .` and run with `docker run --rm -v $WORK_DIR:/src dakota -i $DAKOTA_INPUT_FILE` where `$WORK_DIR` is your Dakota working directory mapped into the container. 
 
 ### About Dakota
 
