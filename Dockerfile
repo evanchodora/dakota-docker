@@ -14,11 +14,15 @@ RUN yum --setopt=tsflags=nodocs -y update && \
 	cmake make \
 	openmpi openmpi-devel \
 	perl \
-	python && \
+	python \
+    epel-release python36 cmake3 && \
+    python3.6 -m ensurepip && \
+    ln -s /usr/bin/python3.6 /usr/bin/python3 && \
+    ln -s /usr/local/bin/pip3 /usr/bin/pip3 && \
 	yum clean all
 
 # Set some environment variables for Dakota
-ENV CMAKE_VER=3.14.4
+#ENV CMAKE_VER=3.14.4
 ENV DAKOTA_VER=6.10
 ENV INSTALL_DIR /opt/dakota
 ENV PATH $INSTALL_DIR/bin:$INSTALL_DIR/share/dakota/test:$PATH
@@ -27,14 +31,14 @@ ENV PYTHONPATH $PYTHONPATH:$INSTALL_DIR/share/dakota/Python
 WORKDIR /src
 
 # Install CMake
-RUN wget https://github.com/Kitware/CMake/releases/download/v${CMAKE_VER}/cmake-${CMAKE_VER}.tar.gz && \
-	tar xf cmake* && \
-	cd cmake* && \
-	./bootstrap --prefix=/usr/local && \
-	make -j$(nproc) && \
-	make install && \
-	cd /src && rm -rf /src/* && \
-	cmake --version
+#RUN wget https://github.com/Kitware/CMake/releases/download/v${CMAKE_VER}/cmake-${CMAKE_VER}.tar.gz && \
+#	tar xf cmake* && \
+#	cd cmake* && \
+#	./bootstrap --prefix=/usr/local && \
+#	make -j$(nproc) && \
+#	make install && \
+#	cd /src && rm -rf /src/* && \
+#	cmake --version
 
 # Pull the Dakota source code from Sandia, extract, and delete, then build and install
 RUN wget -O dakota.tar.gz "https://dakota.sandia.gov/sites/default/files/distributions/public/dakota-${DAKOTA_VER}-release-public.src.tar.gz" && \
