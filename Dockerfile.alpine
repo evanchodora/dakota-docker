@@ -1,0 +1,98 @@
+# Set base image (Sandia uses CentOS/RHEL for development)
+# Alpine i a much lighter image
+FROM alpine:3.9
+
+ENV LANG=C.UTF-8
+
+# Here we install GNU libc (aka glibc) and set C.UTF-8 locale as default.
+
+RUN ALPINE_GLIBC_BASE_URL="https://github.com/sgerrand/alpine-pkg-glibc/releases/download" && \
+    ALPINE_GLIBC_PACKAGE_VERSION="2.29-r0" && \
+    ALPINE_GLIBC_BASE_PACKAGE_FILENAME="glibc-$ALPINE_GLIBC_PACKAGE_VERSION.apk" && \
+    ALPINE_GLIBC_BIN_PACKAGE_FILENAME="glibc-bin-$ALPINE_GLIBC_PACKAGE_VERSION.apk" && \
+    ALPINE_GLIBC_I18N_PACKAGE_FILENAME="glibc-i18n-$ALPINE_GLIBC_PACKAGE_VERSION.apk" && \
+    apk add --no-cache --virtual=.build-dependencies wget ca-certificates && \
+    echo \
+        "-----BEGIN PUBLIC KEY-----\
+        MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApZ2u1KJKUu/fW4A25y9m\
+        y70AGEa/J3Wi5ibNVGNn1gT1r0VfgeWd0pUybS4UmcHdiNzxJPgoWQhV2SSW1JYu\
+        tOqKZF5QSN6X937PTUpNBjUvLtTQ1ve1fp39uf/lEXPpFpOPL88LKnDBgbh7wkCp\
+        m2KzLVGChf83MS0ShL6G9EQIAUxLm99VpgRjwqTQ/KfzGtpke1wqws4au0Ab4qPY\
+        KXvMLSPLUp7cfulWvhmZSegr5AdhNw5KNizPqCJT8ZrGvgHypXyiFvvAH5YRtSsc\
+        Zvo9GI2e2MaZyo9/lvb+LbLEJZKEQckqRj4P26gmASrZEPStwc+yqy1ShHLA0j6m\
+        1QIDAQAB\
+        -----END PUBLIC KEY-----" | sed 's/   */\n/g' > "/etc/apk/keys/sgerrand.rsa.pub" && \
+    wget \
+        "$ALPINE_GLIBC_BASE_URL/$ALPINE_GLIBC_PACKAGE_VERSION/$ALPINE_GLIBC_BASE_PACKAGE_FILENAME" \
+        "$ALPINE_GLIBC_BASE_URL/$ALPINE_GLIBC_PACKAGE_VERSION/$ALPINE_GLIBC_BIN_PACKAGE_FILENAME" \
+        "$ALPINE_GLIBC_BASE_URL/$ALPINE_GLIBC_PACKAGE_VERSION/$ALPINE_GLIBC_I18N_PACKAGE_FILENAME" && \
+    apk add --no-cache \
+        "$ALPINE_GLIBC_BASE_PACKAGE_FILENAME" \
+        "$ALPINE_GLIBC_BIN_PACKAGE_FILENAME" \
+        "$ALPINE_GLIBC_I18N_PACKAGE_FILENAME" && \
+    \
+    rm "/etc/apk/keys/sgerrand.rsa.pub" && \
+    /usr/glibc-compat/bin/localedef --force --inputfile POSIX --charmap UTF-8 "$LANG" || true && \
+    echo "export LANG=$LANG" > /etc/profile.d/locale.sh && \
+    \
+    apk del glibc-i18n && \
+    \
+    rm "/root/.wget-hsts" && \
+    apk del .build-dependencies && \
+    rm \
+        "$ALPINE_GLIBC_BASE_PACKAGE_FILENAME" \
+        "$ALPINE_GLIBC_BIN_PACKAGE_FILENAME" \
+        "$ALPINE_GLIBC_I18N_PACKAGE_FILENAME"
+
+# Install Dakota requirements and dependencies
+RUN echo "http://dl-cdn.alpinelinux.org/alpine/edge/main" >> /etc/apk/repositories && \
+    echo "http://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories && \
+    echo "http://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories && \
+    apk --no-cache update && \
+    apk --no-cache add \
+	wget \
+	boost boost-dev \
+    numactl numactl-dev \
+	gcc g++ \
+	gfortran \
+	gsl gsl-dev \
+	lapack lapack-dev \
+	cmake make \
+	perl \
+	python2 python3
+
+# Set some environment variables for Dakota
+ENV OPENMPI_VER=4.0.1
+ENV DAKOTA_VER=6.10
+ENV INSTALL_DIR /opt/dakota
+ENV PATH $INSTALL_DIR/bin:$INSTALL_DIR/share/dakota/test:$PATH
+ENV PYTHONPATH $PYTHONPATH:$INSTALL_DIR/share/dakota/Python
+
+WORKDIR /src
+
+# Install OpenMPI
+RUN wget https://download.open-mpi.org/release/open-mpi/v4.0/openmpi-${OPENMPI_VER}.tar.gz && \
+    tar xf openmpi-${OPENMPI_VER}.tar.gz && \
+	cd openmpi-${OPENMPI_VER} && \
+	./configure --prefix=/usr/local && \
+	make -j$(nproc) && \
+    make install && \
+	cd /src && rm -rf /src/*
+
+# Pull the Dakota source code from Sandia, extract, and delete, then build and install
+RUN wget -O dakota.tar.gz "https://dakota.sandia.gov/sites/default/files/distributions/public/dakota-${DAKOTA_VER}-release-public.src.tar.gz" && \
+	tar xf dakota.tar.gz && \
+	rm dakota.tar.gz && \
+	mkdir build && cd build && \
+	cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR \
+	-DHAVE_QUESO:BOOL=ON -DDAKOTA_HAVE_GSL:BOOL=ON \
+	-DDAKOTA_HAVE_MPI:BOOL=TRUE \
+    -DCMAKE_CXX_COMPILER:FILEPATH=/usr/local/bin/mpicxx \
+	/src/dakota-${DAKOTA_VER}.0.src && \
+	make -j$(nproc) && \
+	make install && \
+	rm -rf /src/*
+
+# Entrypoint and initial command
+ENTRYPOINT [ "dakota" ]
+CMD [ "-v" ]
