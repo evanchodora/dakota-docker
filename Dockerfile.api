@@ -1,0 +1,5 @@
+FROM dakota:latest
+
+RUN pip3 install flask flask_restful requests
+
+CMD [ "python3", "/code/run_server.py" ]

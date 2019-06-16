@@ -15,9 +15,11 @@ RUN yum --setopt=tsflags=nodocs -y update && \
 	openmpi openmpi-devel \
 	perl \
 	python \
-    epel-release python36 cmake3 && \
-    python3.6 -m ensurepip && \
-    ln -s /usr/bin/python3.6 /usr/bin/python3 && \
+    epel-release && \
+    yum --setopt=tsflags=nodocs -y update && \
+    yum --setopt=tsflags=nodocs -y install \
+    python36 cmake3 && \
+    python3 -m ensurepip && \
     ln -s /usr/local/bin/pip3 /usr/bin/pip3 && \
 	yum clean all
 
@@ -45,7 +47,7 @@ RUN wget -O dakota.tar.gz "https://dakota.sandia.gov/sites/default/files/distrib
 	tar xf dakota.tar.gz && \
 	rm dakota.tar.gz && \
 	mkdir build && cd build && \
-	cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR \
+	cmake3 -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR \
 	-DHAVE_QUESO:BOOL=ON -DDAKOTA_HAVE_GSL:BOOL=ON \
 	-DDAKOTA_HAVE_MPI:BOOL=TRUE \
 	-DCMAKE_CXX_COMPILER:FILEPATH=/usr/lib64/openmpi/bin/mpicxx \
@@ -54,6 +56,5 @@ RUN wget -O dakota.tar.gz "https://dakota.sandia.gov/sites/default/files/distrib
 	make install && \
 	rm -rf /src/*
 
-# Entrypoint and initial command
-ENTRYPOINT [ "dakota" ]
-CMD [ "-v" ]
+# Initial command
+CMD [ "dakota", "-v" ]
